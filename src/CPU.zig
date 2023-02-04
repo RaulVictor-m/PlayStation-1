@@ -1,6 +1,9 @@
 const INSTRUCTIONS = @import("CPU_INSTRUCTIONS.zig");
 const Bus = @import("Bus.zig").Bus;
 
+const std = @import("std");
+const print = std.debug.print;
+
 inline fn pInstruct (opcode: u32) u32{return (opcode & 0b1111_1100_0000_0000_0000_0000_0000_0000) >> 26;}
 inline fn rs        (opcode: u32) u32{return (opcode & 0b0000_0011_1110_0000_0000_0000_0000_0000) >> 21;}
 inline fn rt        (opcode: u32) u32{return (opcode & 0b0000_0000_0001_1111_0000_0000_0000_0000) >> 16;}
@@ -119,10 +122,11 @@ const CPU = struct
     }
 
     //INVALID
-    // fn XXX(self: *CPU ) void
-    // {
-    // 
-    // }
+    fn XXX(self: *CPU ) void
+    {
+        print("{s}",self.CurrentOpcode);
+        return;
+    }
 
 
 ///////////////////////////////////////
@@ -398,11 +402,11 @@ const CPU = struct
 
     // }
 
-    // //
-    // fn XORI(self: *CPU ) void
-    // {
-
-    // }
+    // XOR rt, rs ^ IMM
+    fn XORI(self: *CPU ) void
+    {
+        self.REGS[rt(self.CurrentOpcode)] = self.REGS[rs(self.CurrentOpcode)] ^ imm(self.CurrentOpcode);
+    }
 
 
 
@@ -415,7 +419,7 @@ const CPU = struct
 
 
 
-    //"ADD rd, rs + rt" exeption signed overflow
+    //"ADD rd, rs(signed) + rt(signed)" exception signed overflow
     fn ADD(self: *CPU ) void
     {
         const result = @bitCast(i32,self.REGS[rs(self.CurrentOpcode)]) + @bitCast(i32,self.REGS[rt(self.CurrentOpcode)]);
@@ -502,11 +506,12 @@ const CPU = struct
 
     // }
 
-    // //
-    // fn NOR(self: *CPU ) void
-    // {
-
-    // }
+    // NOR rd, rt NOR rs 
+    fn NOR(self: *CPU ) void
+    {
+        const result = !(self.REGS[rt(self.CurrentOpcode)] | self.REGS[rs[self.CurrentOpcode]]);
+        self.REGS[rd(self.CurrentOpcode)] = result;
+    }
 
     //"OR rd, rt | rs "
     fn OR(self: *CPU ) void
@@ -520,11 +525,12 @@ const CPU = struct
         self.REGS[rd(self.CurrentOpcode)] = self.REGS[rt(self.CurrentOpcode)] << imms(self.CurrentOpcode);
     }
 
-    // //
-    // fn SLLV(self: *CPU ) void
-    // {
-
-    // }
+    // SHL rd, rt << rs-5_low_bits
+    fn SLLV(self: *CPU ) void
+    {
+        const shift = self.REGS[rs(self.CurrentOpcode)] & 0b11111;
+        self.REGS[rd(self.CurrentOpcode)] = self.REGS[rt(self.CurrentOpcode)] << shift;
+    }
 
     //"SET rd, rs(signed) < rt(signed)"
     fn SLT(self: *CPU ) void
@@ -549,11 +555,13 @@ const CPU = struct
         self.REGS[rd(self.CurrentOpcode)] = @bitCast(u32,result);
     }
 
-    // //
-    // fn SRAV(self: *CPU ) void
-    // {
-
-    // }
+    //SHR rd, rt(singed) >> rs-5_low_bits
+    fn SRAV(self: *CPU ) void
+    {
+        const shift = self.REGS[rs(self.CurrentOpcode)] & 0b11111; 
+        const result = @bitCast(i32,self.REGS[rt(self.CurrentOpcode)]) >> shift;
+        self.REGS[rd(self.CurrentOpcode)] = @bitCast(u32,result);
+    }
 
     //"SHR rd, rt >> imms"
     fn SRL(self: *CPU ) void
@@ -562,24 +570,24 @@ const CPU = struct
         self.REGS[rd(self.CurrentOpcode)] = result;
     }
 
-    // //
-    // fn SRLV(self: *CPU ) void
-    // {
+    // SHR rd, rt >> rs-5_low_bits
+    fn SRLV(self: *CPU ) void
+    {
+        const shift = self.REGS[rs(self.CurrentOpcode)] & 0b11111;
+        self.REGS[rd(self.CurrentOpcode)] = self.REGS[rt(self.CurrentOpcode)] >> shift;
+    }
 
-    // }
-
-    // //
-    // fn SUB(self: *CPU ) void
-    // {
-
-    // }
+    //"SUB rd, rs - rt" exception
+    fn SUB(self: *CPU ) void
+    {
+        const result = @bitCast(i32,self.REGS[rs(self.CurrentOpcode)]) - @bitCast(i32,self.REGS[rt(self.CurrentOpcode)]);
+        self.REGS[rd(self.CurrentOpcode)] = @bitCast(u32, result);
+    }
 
     //"SUB rd, rs - rt"
     fn SUBU(self: *CPU ) void
     {
         self.REGS[rd(self.CurrentOpcode)] = self.REGS[rs(self.CurrentOpcode)] -% self.REGS[rt(self.CurrentOpcode)];
-
-
     }
 
     // //
@@ -588,9 +596,9 @@ const CPU = struct
 
     // }
 
-    // //
-    // fn XOR(self: *CPU ) void
-    // {
-
-    // }
+    //XOR rd, rs ^ rt
+    fn XOR(self: *CPU ) void
+    {
+        self.REGS[rd(self.CurrentOpcode)] = self.REGS[rs(self.CurrentOpcode)] ^ self.REGS[rt(self.CurrentOpcode)];
+    }
 };
