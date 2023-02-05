@@ -22,19 +22,21 @@ inline fn signed_imm(opcode: u32) u32
 
 inline fn imm_jump26(opcode: u32) u32{return (opcode & 0b0000_0011_1111_1111_1111_1111_1111_1111);}
 
-//TODOO: ALL --LOAD-- FUNCTIONS NEED FIXING (NOT IMPLEMENTED PROPERLLY, DUE TO "SLOT DELAY")
+// TODOO: ALL --LOAD-- FUNCTIONS NEED FIXING (NOT IMPLEMENTED PROPERLLY, DUE TO "SLOT DELAY")
 //TODOO: SOUND REGISTERS IMPLEMENTATION 
-//TODOO: FIXING COPROCESSOR-0 AND ADDING THE REST
+
+//TODOO: FIXING COPROCESSOR FUNCTIONS
+
 //TODOO: CACHE AND CACHE CONTROLL
+
 //TODOO: INTERRUPTS
 //TODOO: EXEPTIONS
-//TODOO: DIVISION AND MULTIPLICATION
-//TODOO: FINISH A FEW SIMPLE OPCODES
+
 const CPU = struct
 {
     bus: *Bus,
 
-    //registers
+    // registers
     PC: u32,
     HI: u32,
     LO: u32,
@@ -444,17 +446,45 @@ const CPU = struct
 
     // }
 
-    // //
-    // fn DIV(self: *CPU ) void
-    // {
+    //DIV lo, rs-signed / rt-signed ------- hi = remainder 
+    fn DIV(self: *CPU ) void
+    {
+        const numerator = @bitCast(i32,self.REGS[rs(self.CurrentOpcode)]);
+        const denominator = @bitCast(i32,self.REGS[rt(self.CurrentOpcode)]);
+        if(denominator == 0)
+        {
+            if(numerator < 0)
+            {
+                self.LO = 1;
+            }else
+            {
+                self.LO = 0xff_ff_ff_ff;
+            }
+        self.HI = numerator;
+        }else
+        {
+            self.HI = @bitCast(u32,numerator % denominator);
+            self.LO = @bitCast(u32,numerator / denominator);
+        }
 
-    // }
+    }
 
-    // //
-    // fn DIVU(self: *CPU ) void
-    // {
+    //DIV lo, rs / rt ------- hi = remainder 
+    fn DIVU(self: *CPU ) void
+    {
+        const numerator = self.REGS[rs(self.CurrentOpcode)];
+        const denominator = self.REGS[rt(self.CurrentOpcode)];
+        if(denominator == 0)
+        {
+        self.LO = 0xff_ff_ff_ff;
+        self.HI = numerator;
+        }else
+        {
+            self.HI = numerator % denominator;
+            self.LO = numerator / denominator;
+        }
 
-    // }
+    }
 
     //"JMP rs, and store RETURN in rd"
     fn JALR(self: *CPU ) void
@@ -494,17 +524,30 @@ const CPU = struct
         self.LO = self.REGS[rs(self.CurrentOpcode)];
     }
 
-    // //
-    // fn MULT(self: *CPU ) void
-    // {
+    //mult hi-lo 64bit, rt-signed * rs-signed
+    fn MULT(self: *CPU ) void
+    {
+        const rt_64 = @intCast(i64,@bitCast(i32,self.REGS[rt(self.CurrentOpcode)])); 
+        const rs_64 = @intCast(i64,@bitCast(i32,self.REGS[rs(self.CurrentOpcode)]));
 
-    // }
+        const result =  @intCast(u64,(rt_64 * rs_64));
 
-    // //
-    // fn MULTU(self: *CPU ) void
-    // {
+        self.HI = @truncate(u32,(result >> 32));
+        self.LO = @truncate(u32,(result));
+        
+    }
 
-    // }
+    //mult hi-lo 64bit, rt * rs
+    fn MULTU(self: *CPU ) void
+    {
+        const rt_64 = @intCast(u64, self.REGS[rt(self.CurrentOpcode)]);
+        const rs_64 = @intCast(u64, self.REGS[rs(self.CurrentOpcode)]);
+        
+        const result =  rt_64 * rs_64;
+
+        self.HI = @truncate(u32,(result >> 32));
+        self.LO = @truncate(u32,(result));
+    }
 
     // NOR rd, rt NOR rs 
     fn NOR(self: *CPU ) void
