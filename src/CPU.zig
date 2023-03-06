@@ -22,7 +22,7 @@ inline fn signed_imm(opcode: u32) u32
 
 inline fn imm_jump26(opcode: u32) u32{return (opcode & 0b0000_0011_1111_1111_1111_1111_1111_1111);}
 
-// TODOO: ALL --LOAD-- FUNCTIONS NEED FIXING (NOT IMPLEMENTED PROPERLLY, DUE TO "SLOT DELAY")
+//TODOO: ALL --LOAD-- FUNCTIONS NEED FIXING (NOT IMPLEMENTED PROPERLLY, DUE TO "SLOT DELAY")
 //TODOO: SOUND REGISTERS IMPLEMENTATION 
 
 //TODOO: FIXING COPROCESSOR FUNCTIONS
@@ -81,7 +81,7 @@ const CPU = struct
     inline fn Next(self: *CPU) void
     {
         self.CurrentOpcode = self.NextOpcode;
-        self.NextOpcode = self.Read(self.PC);
+        self.NextOpcode = self.Read32(self.PC);
         self.PC += 4;
     }
 
@@ -90,10 +90,20 @@ const CPU = struct
 
 
 
-    inline fn Read(self: *CPU, addr: u32) u32
+    inline fn Read32(self: *CPU, addr: u32) u32
     {
         return self.bus.Read_DWORD(addr);
+    }        
+    inline fn Read16(self: *CPU, addr: u32) u16
+    {
+        return self.bus.Read_WORD(addr);
+    }    
+    inline fn Read8(self: *CPU, addr: u32) u8
+    {
+        return self.bus.Read_BYTE(addr);
     }
+
+    
     inline fn Write32(self: *CPU, addr: u32, value: u32) void
     {
         self.bus.Write_DWORD(addr, value);
@@ -251,30 +261,34 @@ const CPU = struct
         self.J();
     }
 
-    //
-//     fn LB(self: *CPU ) void
-//     {
+    //LB-sign_extended rt, offset(rs) "exception"   
+	fn LB(self: *CPU ) void
+	{
+		const value_i8 = @bitCast(i8,Read8(self.REGS[rs(self.CurrentOpcode)]+signed_imm(self.CurrentOpcode)));
+		const value_i32 = @intCast(i32, value_i8);
+		self.REGS[rt(self.CurrentOpcode)] = @bitCast(u32, value_i32);
 
+	}
 
-//     }
+    //LB rt, offset(rs) "exception"   
+    fn LBU(self: *CPU ) void
+    {
+		self.REGS[rt(self.CurrentOpcode)] = @intCast(u32, Read8(self.REGS[rs(self.CurrentOpcode)]+signed_imm(self.CurrentOpcode)));		
+    }
 
-    // //
-    // fn LBU(self: *CPU ) void
-    // {
-
-    // }
-
-    // //
-    // fn LH(self: *CPU ) void
-    // {
-
-    // }
-
-    // //
-    // fn LHU(self: *CPU ) void
-    // {
-
-    // }
+    //LH-sign_extended rt, offset(rs) "exception"   
+    fn LH(self: *CPU ) void
+    {
+		const value_i16 = @bitCast(i16,Read16(self.REGS[rs(self.CurrentOpcode)]+signed_imm(self.CurrentOpcode)));
+		const value_i32 = @intCast(i32, value_i16);
+		self.REGS[rt(self.CurrentOpcode)] = @bitCast(u32, value_i32);    
+  	}
+  	
+    //LH rt, offset(rs) "exception"      	
+    fn LHU(self: *CPU ) void
+    {
+		self.REGS[rt(self.CurrentOpcode)] = @intCast(u32, Read16(self.REGS[rs(self.CurrentOpcode)]+signed_imm(self.CurrentOpcode)));		
+    }
 
     //“STORES HIGH16_rt, imm”
     fn LUI(self: *CPU ) void
@@ -282,13 +296,13 @@ const CPU = struct
         self.REGS[rt(self.CurrentOpcode)] = (imm(self.CurrentOpcode) << 16);
     }
 
-    //LW rt, offset(rs)
+    //LW-sign_extended rt, offset(rs) "exception"
     fn LW(self: *CPU ) void
-    {
-        if (!(self.REGS_cop0[12] & 0b10000)) //NOT READING FROM CACHE
-                self.REGS[rt(self.CurrentOpcode)] = Read(self.REGS[rs(self.CurrentOpcode)]+signed_imm(self.CurrentOpcode));
+ 	{
+		self.REGS[rt(self.CurrentOpcode)] = Read32(self.REGS[rs(self.CurrentOpcode)]+signed_imm(self.CurrentOpcode));
+		
 
-            //TODOO:: fix the computation order for the next instructions DELAY SLOT  --- WORKS DIFFERENTLY FROM NORMAL DELAY SLOT
+      //TODOO: implement something to make sure rt isn't used as source in the next instruction
     }
 
     // //
@@ -315,17 +329,20 @@ const CPU = struct
 
     // }
 
-    // //
-    // fn LWL(self: *CPU ) void
-    // {
+    //Load rt-most_sign-16, [offset(rs)]-16bit "exception"
+    fn LWL(self: *CPU ) void
+    {
+		const value = @intCast(u32, Read16(self.REGS[rs(self.CurrentOpcode)]+signed_imm(self.CurrentOpcode))) << 16;
+		self.REGS[rt(self.CurrentOpcode)] |= value;
+		
+    }
 
-    // }
-
-    // //
-    // fn LWR(self: *CPU ) void
-    // {
-
-    // }
+    //Load rt-least_sign-16, [offset(rs)]-16bit "exception"
+    fn LWR(self: *CPU ) void
+    {
+		const value = @intCast(u32, Read16(self.REGS[rs(self.CurrentOpcode)]+signed_imm(self.CurrentOpcode)));
+		self.REGS[rt(self.CurrentOpcode)] |= value;
+    }
 
     //"ORI rt, rs | imm "
     fn ORI(self: *CPU ) void
@@ -391,18 +408,20 @@ const CPU = struct
     // {
 
     // }
+    
+    //"STORE [rs+imm], rt-most_sign16"
+    fn SWL(self: *CPU ) void
+    {
+    	const value = self.REGS[rt(self.CurrentOpcode)] >> 16;
+		self.Write16(self.REGS[rs(self.CurrentOpcode)] + signed_imm(self.CurrentOpcode), @truncate(u16, value));
+    }
 
-    // //
-    // fn SWL(self: *CPU ) void
-    // {
-
-    // }
-
-    // //
-    // fn SWR(self: *CPU ) void
-    // {
-
-    // }
+    //"STORE [rs+imm], rt-least_sign16"
+    fn SWR(self: *CPU ) void
+    {
+    	const value = self.REGS[rt(self.CurrentOpcode)];
+		self.Write16(self.REGS[rs(self.CurrentOpcode)] + signed_imm(self.CurrentOpcode), @truncate(u16, value));
+    }
 
     // XOR rt, rs ^ IMM
     fn XORI(self: *CPU ) void

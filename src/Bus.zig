@@ -33,12 +33,27 @@ const Bus = struct
         allocator.free(self.MEMORY);
     }
 
+    
+
     fn Read_DWORD(self:*Bus, addr: u32) u32
     {
         //ALREADY DOES ALIMENTING CHECKING SO NO NEED TO CHECK IF ADDR IS MULTPLE OF 4
         const ptr = @ptrCast(*u32, @alignCast(4, &self.MEMORY[addr]));
         return ptr.*;
     }
+    fn Read_WORD(self:*Bus, addr: u32) u16
+    {
+        //ALREADY DOES ALIMENTING CHECKING SO NO NEED TO CHECK IF ADDR IS MULTPLE OF 4
+        const ptr = @ptrCast(*u16, @alignCast(2, &self.MEMORY[addr]));
+        return ptr.*;
+    }
+    fn Read_BYTE(self:*Bus, addr: u32) u8
+    {
+        //ALREADY DOES ALIMENTING CHECKING SO NO NEED TO CHECK IF ADDR IS MULTPLE OF 4
+        return self.MEMORY[addr];
+    }
+
+    
 
     fn Write_DWORD(self:*Bus, addr: u32, value: u32) void
     {
