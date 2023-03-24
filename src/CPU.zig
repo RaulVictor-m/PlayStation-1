@@ -23,7 +23,6 @@ inline fn signed_imm(opcode: u32) u32
 inline fn imm_jump26(opcode: u32) u32{return (opcode & 0b0000_0011_1111_1111_1111_1111_1111_1111);}
 
 //TODOO: ALL --LOAD-- FUNCTIONS NEED FIXING (NOT IMPLEMENTED PROPERLLY, DUE TO "SLOT DELAY")
-//TODOO: SOUND REGISTERS IMPLEMENTATION 
 
 //TODOO: FIXING COPROCESSOR FUNCTIONS
 
@@ -45,7 +44,12 @@ const CPU = struct
 
     //COPROCESSOR REGISTERS
     REGS_cop0: [32]u32,    
-                            
+
+//    cop_SR: u32,		//cop_12     interrupsts flag
+//	  cop_Cause: u32,   //cop_13
+//    cop_EPC: u32,		//cop_14
+	
+    
 
     //--
     CurrentOpcode: u32,
@@ -120,6 +124,19 @@ const CPU = struct
 
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+// EXCEPTIONS STAGE
+/////////////////////////////////////////////////////////////////////////////////////////////
+    fn exception(self: *CPU) void{
+		self.REGS_cop0[13] = self.PC;//self.cop_EPC = self.PC;  
+		// pass the calse to the calse register
+		// disable all interupst 
+		// jumps to the exception handler address
+
+		
+	//TODOO: receve the exception and jump to the handle adress for the exception
+	// any function that excepts should end up here 
+    }
 /////////////////////////////////////////////////////////////////////////////////////////////
 // OPCODES STAGE
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -222,6 +239,28 @@ const CPU = struct
 
     // }
 
+
+///////////////////////////////////////
+// COOPROCESSOR HANDLING 
+///////////////////////////////////////
+	
+	fn Copx_Action(self: *CPU ) void
+	{
+		switch (rs(self.CurrentOpcode)){
+			//MFCx    ----   mov rt, cop_rd
+			0 => {
+				self.REGS[rt(self.CurrentOpcode)] = self.REGS_cop0[rd(self.CurrentOpcode)];
+			},
+			0 => {
+
+			},
+			0 => {
+
+			},
+
+		}
+		
+	}
     //cop0_rd, rt
     fn COP0(self: *CPU ) void
     {
@@ -246,6 +285,11 @@ const CPU = struct
     // {
 
     // }
+
+
+///////////////////////////////////////
+///////////////////////////////////////
+///////////////////////////////////////
 
     //"Jmp to imm26"
     fn J(self: *CPU ) void
