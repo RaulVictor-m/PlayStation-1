@@ -238,7 +238,7 @@ pub const Cpu = struct {
         var cpu: Cpu = Cpu.init();
 
         //constructing opcode
-        cpu.current_op = maskMakeOp(0x9, 1, 0, 0, 100); //op rs rt rd imm
+        cpu.current_op = maskMakeOp(0xc, 1, 0, 0, 100); //op rs rt rd imm
 
         //normal andi
         cpu.regs[1] = 0xffffffff; //rs
@@ -282,14 +282,14 @@ pub const Cpu = struct {
         if (self.regs[maskRt(self.current_op)] != self.regs[maskRs(self.current_op)]) {
             self.pc += (maskSignedImm(self.current_op) << 2) - 4; // the -4 is used because my PC register is in position os next_op not Current
         }
-    }
+    }//TOTEST
 
     //Branchs link
     pub inline fn BcondZ(self: *Cpu ) void {
         _ = self;
         @panic("BcondZ not implemented");
         //const decoder = rt(self.current_op);
-    }
+    }//TOTEST
 
     ///////////////////////////////////////
     // COOPROCESSOR HANDLING
@@ -304,31 +304,32 @@ pub const Cpu = struct {
             0 => {},
             0 => {},
         }
-    }
+    }//TOTEST
+
     //cop0_rd, rt
     pub inline fn COP0(self: *Cpu) void {
         self.regs_cop0[maskRd(self.current_op)] = self.regs[maskRt(self.current_op)];
         //TODOO: FIX AND FINISH THE IMPLEMENTATION OF THE REGISTERS
-    }
+    }//TOTEST
 
     //
     pub inline fn COP1(self: *Cpu ) void {
         _ = self;
         @panic("COP1 not implemented");
 
-    }
+    }//TOTEST
 
     //
     pub inline fn COP2(self: *Cpu ) void {
         _ = self;
         @panic("COP2 not implemented");
-    }
+    }//TOTEST
 
     //
     pub inline fn COP3(self: *Cpu ) void {
         _ = self;
         @panic("COP3 not implemented");
-    }
+    }//TOTEST
 
     ///////////////////////////////////////
     ///////////////////////////////////////
@@ -338,90 +339,115 @@ pub const Cpu = struct {
     pub inline fn J(self: *Cpu) void {
         //EXECUTE NEXT INTRUCTION BEFORE JUMPING --- DONE DUE TO NEXT INSTRUCTION BEEN ALREADY LOADED
         self.pc = (self.pc & 0xf0000000) | ((maskImmJump26(self.current_op)) << 2);
-    }
+    }//TOTEST
 
     //"CALL instruction :)"
     pub inline fn JAL(self: *Cpu) void {
         self.regs[31] = self.pc;
         self.J();
-    }
+    }//TOTEST
 
     //LB-sign_extended rt, offset(rs) "exception"
     pub inline fn LB(self: *Cpu) void {
         const value_i8 = @as(i8, @bitCast(read8(self.regs[maskRs(self.current_op)] + maskSignedImm(self.current_op))));
         const value_i32 = @as(i32, @intCast(value_i8));
         self.regs[maskRt(self.current_op)] = @as(u32, @bitCast(value_i32));
-    }
+    }//TOTEST
 
     //LB rt, offset(rs) "exception"
     pub inline fn LBU(self: *Cpu) void {
         self.regs[maskRt(self.current_op)] = @as(u32, @intCast(read8(self.regs[maskRs(self.current_op)] + maskSignedImm(self.current_op))));
-    }
+    }//TOTEST
 
     //LH-sign_extended rt, offset(rs) "exception"
     pub inline fn LH(self: *Cpu) void {
         const value_i16 = @as(i16, @bitCast(read16(self.regs[maskRs(self.current_op)] + maskSignedImm(self.current_op))));
         const value_i32 = @as(i32, @intCast(value_i16));
         self.regs[maskRt(self.current_op)] = @as(u32, @bitCast(value_i32));
-    }
+    }//TOTEST
 
     //LH rt, offset(rs) "exception"
     pub inline fn LHU(self: *Cpu) void {
         self.regs[maskRt(self.current_op)] = @as(u32, @intCast(read16(self.regs[maskRs(self.current_op)] + maskSignedImm(self.current_op))));
-    }
+    }//TOTEST
 
     //“STORES HIGH16_rt, imm”
     pub inline fn LUI(self: *Cpu) void {
         self.regs[maskRt(self.current_op)] = (maskImm(self.current_op) << 16);
-    }
+    }//TOTEST
 
     //LW-sign_extended rt, offset(rs) "exception"
     pub inline fn LW(self: *Cpu) void {
         self.regs[maskRt(self.current_op)] = read32(self.regs[maskRs(self.current_op)] + maskSignedImm(self.current_op));
 
         //TODOO: implement something to make sure rt isn't used as source in the next instruction
-    }
+    }//TOTEST
 
     //
     pub inline fn LWC0(self: *Cpu ) void {
         _ = self;
         @panic("LWC0 not implemented");
-    }
+    }//TOTEST
 
     //
     pub inline fn LWC1(self: *Cpu ) void {
         _ = self;
         @panic("LWC1 not implemented");
-    }
+    }//TOTEST
 
     //
     pub inline fn LWC2(self: *Cpu ) void {
         _ = self;
         @panic("LWC2 not implemented");
-    }
+    }//TOTEST
 
     //
     pub inline fn LWC3(self: *Cpu ) void {
         _ = self;
         @panic("LWC3 not implemented");
-    }
+    }//TOTEST
 
     //Load rt-most_sign-16, [offset(rs)]-16bit "exception"
     pub inline fn LWL(self: *Cpu) void {
         const value = @as(u32, @intCast(read16(self.regs[maskRs(self.current_op)] + maskSignedImm(self.current_op)))) << 16;
         self.regs[maskRt(self.current_op)] |= value;
-    }
+    }//TOTEST
 
     //Load rt-least_sign-16, [offset(rs)]-16bit "exception"
     pub inline fn LWR(self: *Cpu) void {
         const value = @as(u32, @intCast(read16(self.regs[maskRs(self.current_op)] + maskSignedImm(self.current_op))));
         self.regs[maskRt(self.current_op)] |= value;
+    }//TOTEST
+
+    //"ORI: rt <- rs | imm" no exception
+    pub inline fn ORI(self: *Cpu) void {
+        const rt = maskRt(self.current_op);
+        const rs = maskRs(self.current_op);
+        const imm = maskImm(self.current_op);
+
+        self.regs[rt] = self.regs[rs] | imm;
+    }
+    test "Testing func ORI"{
+        //starting the cpu with the default
+        var cpu: Cpu = Cpu.init();
+
+        //constructing opcode
+        cpu.current_op = maskMakeOp(0xd, 1, 0, 0, 100); //op rs rt rd imm
+
+        //normal ori
+        cpu.regs[1] = 0x0; //rs
+        cpu.ORI();
+        std.debug.assert(cpu.regs[0] == 100); // rt == rs | imm
+
+        //not sign extended imm ori
+        cpu.regs[1] = 0x2; //rs
+        cpu.current_op &= 0xffff0000; //imm clean 
+        cpu.current_op |= 0x8000;     //imm  
+        cpu.ORI();
+        std.debug.assert(cpu.regs[0] == 0x8002); // rt == rs | imm
+
     }
 
-    //"ORI rt, rs | imm "
-    pub inline fn ORI(self: *Cpu) void {
-        self.regs[maskRt(self.current_op)] = self.regs[maskRs(self.current_op)] | maskImm(self.current_op);
-    }
 
     //"STORES [signed_imm + base(rs)],  8bit rt "
     pub inline fn SB(self: *Cpu) void {
