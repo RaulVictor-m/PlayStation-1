@@ -190,9 +190,9 @@ pub const Cpu = struct {
 
         //TODOO: CHECK OVERFLOW AND UNDERFLOW AND THROW A PLAYSTATION EXCEPTION IF NEEDED
 
-    }// TODO: TEST
+    }//TOTEST
 
-    //"ADDIU: rt <- rs + immSigned" no exception
+    //"ADDIU: rt <- rs + imm_signed" no exception
     pub inline fn ADDIU(self: *Cpu) void {
         const rt = maskRt(self.current_op);
         const rs = maskRs(self.current_op);
@@ -205,30 +205,52 @@ pub const Cpu = struct {
         var cpu: Cpu = Cpu.init();
 
         //constructing opcode
-        cpu.current_op = maskMakeOp(0x9, 1, 0, 0, 100);
-
+        cpu.current_op = maskMakeOp(0x9, 1, 0, 0, 100); //op rs rt rd imm_signed
 
         //normal add
         cpu.regs[1] = 10; //rs
         cpu.ADDIU();
-        std.debug.assert(cpu.regs[0] == 110); // rt == rs + immSigned
+        std.debug.assert(cpu.regs[0] == 110); // rt == rs + imm_signed
 
         //wrapping around add
         cpu.regs[1] = 0xffffffff; //rs
         cpu.ADDIU();
-        std.debug.assert(cpu.regs[0] == 99); // rt == rs + immSigned
+        std.debug.assert(cpu.regs[0] == 99); // rt == rs + imm_signed
 
         //negative value on imm add
         cpu.regs[1] = 1000; //rs
-        cpu.current_op |= 0xffff - 10; //immSigned = -11 
+        cpu.current_op |= 0xffff - 10; //imm_signed = -11 
         cpu.ADDIU();
-        std.debug.assert(cpu.regs[0] == 989); // rt == rs + immSigned
+        std.debug.assert(cpu.regs[0] == 989); // rt == rs + imm_signed
 
     }
 
-    //"AND rt, rs & imm"
+    //"ANDI: rt <- rs & imm" no exception
     pub inline fn ANDI(self: *Cpu) void {
-        self.regs[maskRt(self.current_op)] = self.regs[maskRs(self.current_op)] & maskImm(self.current_op);
+        const rt = maskRt(self.current_op);
+        const rs = maskRs(self.current_op);
+        const imm = maskImm(self.current_op);
+
+        self.regs[rt] = self.regs[rs] & imm;
+    }
+    test "Testing func ANDI"{
+        //starting the cpu with the default
+        var cpu: Cpu = Cpu.init();
+
+        //constructing opcode
+        cpu.current_op = maskMakeOp(0x9, 1, 0, 0, 100); //op rs rt rd imm
+
+        //normal andi
+        cpu.regs[1] = 0xffffffff; //rs
+        cpu.ANDI();
+        std.debug.assert(cpu.regs[0] == 100); // rt == rs & imm
+
+        //not sign extended imm andi
+        cpu.regs[1] = 0xffffffff; //rs
+        cpu.current_op |= 0xffff; //imm  
+        cpu.ANDI();
+        std.debug.assert(cpu.regs[0] == 0xffff); // rt == rs & imm
+
     }
 
     //Branch if rt == rs
@@ -237,7 +259,7 @@ pub const Cpu = struct {
             self.pc += (maskSignedImm(self.current_op) << 2) - 4; // the -4 is used because my PC register is in position os next_op not Current
             return;
         }
-    }
+    }//TOTEST
 
     //Branch if rs > 0
     pub inline fn BGTZ(self: *Cpu) void {
@@ -245,7 +267,7 @@ pub const Cpu = struct {
             self.pc += (maskSignedImm(self.current_op) << 2) - 4; // the -4 is used because my PC register is in position os next_op not Current
 
         }
-    }
+    }//TOTEST
 
     //Branch if rs(signed) <= 0
     pub inline fn BLEZ(self: *Cpu) void {
