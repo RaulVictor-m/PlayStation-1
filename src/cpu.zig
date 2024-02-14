@@ -37,7 +37,7 @@ inline fn maskImm(opcode: u32) u32 {
     return (opcode & 0xffff);
 }
 inline fn maskSignedImm(opcode: u32) u32 {
-    const signOP = @as(i32, @bitCast((opcode & 0xffff)));
+    const signOP   = @as(i32, @bitCast((opcode & 0xffff)));
     const signOP16 = @as(i16, @truncate(signOP));
     const signOP32 = @as(i32, @intCast(signOP16));
     return @as(u32, @bitCast(signOP32));
@@ -92,14 +92,14 @@ pub const Cpu = struct {
     pub fn init() Cpu {
         const BIOS_START = 0x1fc00000;
         return .{
-            .bus = undefined,
-            .pc = BIOS_START,
-            .hi = 0,
-            .lo = 0,
-            .regs = [_]u32{0} ** 32,
-            .regs_cop0 = [_]u32{0} ** 32,
+            .bus        = undefined,
+            .pc         = BIOS_START,
+            .hi         = 0,
+            .lo         = 0,
+            .regs       = [_]u32{0} ** 32,
+            .regs_cop0  = [_]u32{0} ** 32,
             .current_op = 0,
-            .next_op = 0,
+            .next_op    = 0,
         };
     }
     pub fn connectBus(self: *Cpu, bus: *Bus) void {
@@ -184,9 +184,13 @@ pub const Cpu = struct {
     // PRIMARY OPCODES
     ///////////////////////////////////////
 
-    //"ADD rt, rs + imm" exception 
+    //"ADDI: rt <- rs + imm_signed" exception
     pub inline fn ADDI(self: *Cpu) void {
-        self.regs[maskRt(self.current_op)] = self.regs[maskRs(self.current_op)] + maskSignedImm(self.current_op);
+        const rt = maskRt(self.current_op);
+        const rs = maskRs(self.current_op);
+        const s_imm = maskSignedImm(self.current_op);
+
+        self.regs[rt] = self.regs[rs] +% s_imm;
 
         //TODOO: CHECK OVERFLOW AND UNDERFLOW AND THROW A PLAYSTATION EXCEPTION IF NEEDED
 
@@ -212,16 +216,23 @@ pub const Cpu = struct {
 
     //Branch if rt == rs
     pub inline fn BEQ(self: *Cpu) void {
-        if (self.regs[maskRt(self.current_op)] == self.regs[maskRs(self.current_op)]) {
-            self.pc += (maskSignedImm(self.current_op) << 2) - 4; // the -4 is used because my PC register is in position os next_op not Current
+        const rt = maskRt(self.current_op);
+        const rs = maskRs(self.current_op);
+        const s_imm = maskSignedImm(self.current_op);
+
+        if (self.regs[rt] == self.regs[rs]) {
+            self.pc += (s_imm << 2);
             return;
         }
     }
 
     //Branch if rs > 0
     pub inline fn BGTZ(self: *Cpu) void {
-        if (0 < @as(i32, @bitCast(self.regs[maskRs(self.current_op)]))) {
-            self.pc += (maskSignedImm(self.current_op) << 2) - 4; // the -4 is used because my PC register is in position os next_op not Current
+        const rs = maskRs(self.current_op);
+        const s_imm = maskSignedImm(self.current_op);
+
+        if (0 < @as(i32, @bitCast(self.regs[rs]))) {
+            self.pc += (s_imm << 2); 
 
         }
     }
